@@ -1,9 +1,6 @@
-mod schema;
-mod types;
-
 use std::path::Path;
 
-use schema::Schema;
+use chainschema_gen::Schema;
 
 fn main() {
     load_schema_file();
