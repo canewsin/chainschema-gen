@@ -9,8 +9,8 @@ pub enum SchemeError {
 
 #[derive(Debug, Clone)]
 pub struct Schema {
-    path: String,
-    objects: Vec<Object>,
+    pub path: String,
+    pub objects: Vec<Object>,
 }
 
 impl Schema {
@@ -29,6 +29,7 @@ impl Schema {
 
             let mut objects = Vec::new();
             for line in content.lines() {
+                let line = line.trim();
                 if line.starts_with("//") {
                     continue;
                 }
@@ -61,9 +62,10 @@ impl Schema {
                     }
                 } else if !name.is_empty() && has_body {
                     if line.starts_with('}') {
+                        let fields = fields.drain(..).collect();
                         objects.push(Object {
                             name: name.clone(),
-                            fields: Vec::new(),
+                            fields,
                             parent: parent.clone(),
                             sort: {
                                 if sort.is_some() {
@@ -91,6 +93,21 @@ impl Schema {
                         type_: Type::from_str(&field_type),
                     });
                     // println!("{field_name} : {field_type}");
+                } else if !has_body {
+                    objects.push(Object {
+                        name: name.clone(),
+                        fields: vec![],
+                        parent: parent.clone(),
+                        sort: {
+                            if sort.is_some() {
+                                sort.clone().unwrap()
+                            } else {
+                                Sort::Default
+                            }
+                        },
+                        //TODO: add sparsed object find logic
+                        has_sparsed_fields: false,
+                    });
                 }
             }
             Ok(Schema {

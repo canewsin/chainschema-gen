@@ -63,6 +63,9 @@ pub enum Type {
         sparsed_object: SparsedObject,
         // parent: Option<SparsedObject>,
     },
+    Object {
+        object_name: String,
+    },
     Null,
     NullType {
         which: Box<Type>,
@@ -70,6 +73,13 @@ pub enum Type {
 }
 
 impl Type {
+    pub fn is_primitive(str: &str) -> bool {
+        match str {
+            "str" | "int" | "float" | "bool" | "{@epoch}" | "{@path}" => true,
+            _ => false,
+        }
+    }
+
     pub fn can_be_reduced_str(string: &str) -> bool {
         if string.starts_with("str")
             || string.starts_with("int")
@@ -122,7 +132,7 @@ impl Type {
 
         // prime = 0[rts
         let mut start_rev = prime.split("[");
-        println!("{:?}", start_rev);
+        // println!("{:?}", start_rev);
         let start = {
             if let Some(start) = start_rev.next() {
                 if start.is_empty() {
@@ -190,7 +200,18 @@ impl Type {
                 // "this" => Type::This,
                 "!" => Type::Null,
                 s => {
-                    if Type::is_map(s) {
+                    if s.starts_with('!') {
+                        let object_name = s[1..].to_string();
+                        let is_primitive = Type::is_primitive(&object_name);
+                        let which = if is_primitive {
+                            Type::from_str(&object_name)
+                        } else {
+                            Type::Object { object_name }
+                        };
+                        Type::NullType {
+                            which: Box::new(which),
+                        }
+                    } else if Type::is_map(s) {
                         //[@key      value]
                         let mut splitted = s.split(":");
                         let key = splitted.next().unwrap().to_string();
@@ -233,13 +254,19 @@ impl Type {
             let mut splits = s.split("this.").skip(1);
             // let object_name = (&splits.next().unwrap()[5..]).to_string();
             // let which = Type::from_str(object_name);;
-            let mut splits = splits.next().unwrap().split(".");
+            // let mut splits = splits.next().unwrap().split(".");
             let object_field_name = splits.next().unwrap().to_string();
             let r = &object_field_name;
             let r = &r[1..r.len() - 1];
             let fields = r.split(",").collect::<Vec<&str>>();
             let has_parent = fields[0].contains("..");
-            let parent: Option<Box<SparsedObject>> = if has_parent { None } else { None };
+            let parent: Option<Box<SparsedObject>> = if has_parent {
+                // let parent = fields[0].split("..").skip(1).next().unwrap();
+                // fields.push(parent);
+                None
+            } else {
+                None
+            };
             let sparsed_object = SparsedObject {
                 parent,
                 fields: fields.iter().map(|x| x.to_string()).collect(),
@@ -248,7 +275,7 @@ impl Type {
             Type::This { sparsed_object }
         } else if has_field_ref {
             let mut splits = s.split("}.");
-            let object_name = (&splits.next().unwrap()[5..]).to_string();
+            let object_name = (&splits.next().unwrap()[6..]).to_string();
             // let which = Type::from_str(object_name);
             let field_name = splits.next().unwrap().to_string();
 
