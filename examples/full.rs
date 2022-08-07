@@ -7,7 +7,7 @@ fn main() {
 }
 
 fn load_schema_file() {
-    let path = Path::new("schema/schema.chain");
+    let path = Path::new("examples/schema.chain");
     let schema = Schema::load(path).unwrap();
     println!("{:#?}", schema);
 }

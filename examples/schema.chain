@@ -1,0 +1,85 @@
+// Types supported
+//   //               -      Comments/Docs for type
+//   int              -      32bit integer type
+//   float            -      64bit floating point(numbers with decimal support)
+//   str              -      Strings/Text
+//   bool             -      boolean type True/False
+//   [Type]           -      List Type
+//   [@Type : Type]   -      Map  Type
+//   {@epoch}         -      Date type, this is basically integer but with convinince. Unix epoch format or hex int
+//   {@path}          -      Relative Path or absolute path
+//   [int..int]       -      Slicer or reducer for int/str/list etc
+//   {this}           -      Self Object Reference on chain
+//   {@ref}           -      Reference for another Object on chain
+//   this             -      Special Obj accessor, using this will reduce memory usage. Special field to share part of this object.
+//   !                -      Can be Empty/Null
+
+// Note : 
+//   Difference b/w '{this}' and 'this' is 
+//   'this' will create seperate object in memory and 
+//   {this} is just self reference in same object. 
+
+//Fields can be ordered using (arg) syntax
+//   < => small to big
+//   > => big to small
+//   = => no ordering
+(=)user : {
+        //id field can store upto 32 chars, generators should slice extra chars in string
+          id  : str[..32]
+        //name field can be any length
+         name : str
+        //Path reprensentation of file or directory
+        store : {@path}
+        //this refers to value after 'this.store.' relative path to store field, user should ensure that this path ends up being valid
+          pic : {this.store.{@path}}  
+          bio : str
+        // 'this.' creates a new object moving all fields to new object and leaves only references here
+         meta : this.{id,name}
+        // '..meta' is extended with bio field but here bio is sliced ref so current object is has ref value + remaining field value
+  profilemeta : this.{..meta,bio[0..36]}
+        added : {@epoch}
+}
+
+(=)object : {
+        id : str[..32]
+      date : {@epoch}
+    // user object's meta field ref, to use this syntax user object must exist before this 'object'
+    author : {@ref.user}.meta
+}
+
+// like object which has same fields as 'object' 
+(=)like(:object)
+
+(=)share(:object)
+
+//comment obj with extra field content
+(=)comment(:object) : {
+    content : str
+}
+
+(=)post(:object) : {
+      title : str
+    content : str
+    // list which can be empty
+       pics : [!{@path}]
+      likes : [!like]
+   comments : [!comment]
+     shares : [!share]
+}
+
+
+// Methods for accessing data from blockchain, 
+// these should be auto generated using this schema file
+// to supported languages
+constructor {
+    // Customizable Ordering of Users. If ordering not provided
+    // deafult ordering is applied i.e sort by user added.
+    get ($)users => ($ || >this.added)[user]
+    get ($)posts => ($ || >this.date)[post]
+    get likes => posts.likes
+    get comments => posts.comments
+    get shares => posts.shares
+
+    get profile(id) => users[id]
+    get post(id) => post[id]
+}
